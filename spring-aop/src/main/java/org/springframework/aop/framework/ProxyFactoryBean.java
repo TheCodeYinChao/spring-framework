@@ -80,6 +80,13 @@ import org.springframework.util.ObjectUtils;
  * do not have the same object identity. However, they do have the same interceptors
  * and target, and changing any reference will change all objects.
  *
+ *
+ * 在Spring中创建AOP代理的基本方法是使用org.springframework.aop.framework.ProxyFactoryBean。
+ * 这样就可以完全控制切入点、任何应用的通知以及它们的顺序。但是，如果您不需要这种控制，那么有一些更简单的选项更可取
+ *
+ *使用ProxyFactoryBean或另一个支持ioco的类来创建AOP代理的最重要的好处之一是，通知和切入点也可以由IoC管理。这是一个强大的特性，
+ * 它支持一些其他AOP框架难以实现的方法。例如，通知本身可以引用应用程序对象(除了在任何AOP框架中都应该可用的目标对象)，就是可以应用容器生产的对象，
+ * 从而受益于依赖项注入提供的所有可插性。
  * @author Rod Johnson
  * @author Juergen Hoeller
  * @see #setInterceptorNames
@@ -100,6 +107,11 @@ public class ProxyFactoryBean extends ProxyCreatorSupport
 
 	protected final Log logger = LogFactory.getLog(getClass());
 
+	/**
+	 * 要应用的Advisor、拦截器或其他通知名称的字符串数组。在先到先得的基础上，顺序很重要。也就是说，列表中的第一个拦截器是第一个能够拦截调用的拦截器。
+	 * 这些名称是当前工厂中的bean名称，包括来自祖先工厂的bean名称。您不能在这里提到bean引用，因为这样做会导致ProxyFactoryBean忽略通知的单例设置。
+	 * 可以用星号(*)追加拦截器名称。这样做将导致应用所有具有名称的advisor bean
+	 */
 	@Nullable
 	private String[] interceptorNames;
 
@@ -108,6 +120,9 @@ public class ProxyFactoryBean extends ProxyCreatorSupport
 
 	private boolean autodetectInterfaces = true;
 
+	/**
+	 * 默认值为true。如果你想使用有状态的通知—例如，对于有状态的mixins—使用原型通知连同单例值false。
+	 */
 	private boolean singleton = true;
 
 	private AdvisorAdapterRegistry advisorAdapterRegistry = GlobalAdvisorAdapterRegistry.getInstance();
@@ -247,16 +262,16 @@ public class ProxyFactoryBean extends ProxyCreatorSupport
 	@Override
 	@Nullable
 	public Object getObject() throws BeansException {
-		initializeAdvisorChain();
-		if (isSingleton()) {
-			return getSingletonInstance();
+		initializeAdvisorChain();//初始化advisor(拦截器)链
+		if (isSingleton()) { //是否是单例
+			return getSingletonInstance();//创建单例代理对象
 		}
 		else {
 			if (this.targetName == null) {
 				logger.info("Using non-singleton proxies with singleton targets is often undesirable. " +
 						"Enable prototype proxies by setting the 'targetName' property.");
 			}
-			return newPrototypeInstance();
+			return newPrototypeInstance();//创建多例代理对象
 		}
 	}
 
@@ -433,13 +448,13 @@ public class ProxyFactoryBean extends ProxyCreatorSupport
 				throw new AopConfigException("Target required after globals");
 			}
 
-			// Materialize interceptor chain from bean names.
+			// Materialize interceptor chain from bean names.// 轮询 interceptorNames
 			for (String name : this.interceptorNames) {
-				if (name.endsWith(GLOBAL_SUFFIX)) {
+				if (name.endsWith(GLOBAL_SUFFIX)) {//批量注册的方式：判断name是否以*结尾
 					if (!(this.beanFactory instanceof ListableBeanFactory)) {
 						throw new AopConfigException(
 								"Can only use global advisors or interceptors with a ListableBeanFactory");
-					}
+					} //@1：从容器中匹配查找匹配的增强器，将其添加到aop配置中
 					addGlobalAdvisors((ListableBeanFactory) this.beanFactory,
 							name.substring(0, name.length() - GLOBAL_SUFFIX.length()));
 				}
@@ -447,17 +462,17 @@ public class ProxyFactoryBean extends ProxyCreatorSupport
 				else {
 					// If we get here, we need to add a named interceptor.
 					// We must check if it's a singleton or prototype.
-					Object advice;
+					Object advice;//非匹配的方式：按照name查找bean，将其包装为Advisor丢到aop配置中
 					if (this.singleton || this.beanFactory.isSingleton(name)) {
 						// Add the real Advisor/Advice to the chain.
-						advice = this.beanFactory.getBean(name);
+						advice = this.beanFactory.getBean(name); //从容器中查找bean
 					}
 					else {
 						// It's a prototype Advice or Advisor: replace with a prototype.
 						// Avoid unnecessary creation of prototype bean just for advisor chain initialization.
 						advice = new PrototypePlaceholderAdvisor(name);
 					}
-					addAdvisorOnChainCreation(advice);
+					addAdvisorOnChainCreation(advice);//@2：将advice添加到拦截器列表中
 				}
 			}
 
@@ -499,11 +514,13 @@ public class ProxyFactoryBean extends ProxyCreatorSupport
 
 	/**
 	 * Add all global interceptors and pointcuts.
+	 * 添加所有全局拦截器和切入点，
+	 *  * 容器中所有类型为Advisor/Interceptor的bean，bean名称prefix开头的都会将其添加到拦截器链中
 	 */
 	private void addGlobalAdvisors(ListableBeanFactory beanFactory, String prefix) {
-		String[] globalAdvisorNames =
+		String[] globalAdvisorNames =//获取容器中所有类型为Advisor的bean
 				BeanFactoryUtils.beanNamesForTypeIncludingAncestors(beanFactory, Advisor.class);
-		String[] globalInterceptorNames =
+		String[] globalInterceptorNames =//获取容器中所有类型为Interceptor的bean
 				BeanFactoryUtils.beanNamesForTypeIncludingAncestors(beanFactory, Interceptor.class);
 		if (globalAdvisorNames.length > 0 || globalInterceptorNames.length > 0) {
 			List<Object> beans = new ArrayList<>(globalAdvisorNames.length + globalInterceptorNames.length);
@@ -513,13 +530,13 @@ public class ProxyFactoryBean extends ProxyCreatorSupport
 				}
 			}
 			for (String name : globalInterceptorNames) {
-				if (name.startsWith(prefix)) {
+				if (name.startsWith(prefix)) {//判断bean是否已prefix开头
 					beans.add(beanFactory.getBean(name));
 				}
-			}
+			}//对beans进行排序，可以实现Ordered接口，排序规则：order asc
 			AnnotationAwareOrderComparator.sort(beans);
 			for (Object bean : beans) {
-				addAdvisorOnChainCreation(bean);
+				addAdvisorOnChainCreation(bean); //将其添加到拦截器链中
 			}
 		}
 	}
@@ -534,6 +551,7 @@ public class ProxyFactoryBean extends ProxyCreatorSupport
 	private void addAdvisorOnChainCreation(Object next) {
 		// We need to convert to an Advisor if necessary so that our source reference
 		// matches what we find from superclass interceptors.
+		//将advisor添加到拦截器链中
 		addAdvisor(namedBeanToAdvisor(next));
 	}
 
@@ -564,10 +582,12 @@ public class ProxyFactoryBean extends ProxyCreatorSupport
 	/**
 	 * Convert the following object sourced from calling getBean() on a name in the
 	 * interceptorNames array to an Advisor or TargetSource.
+	 *
 	 */
+	//namedBeanToAdvisor用来将bean转换为advisor
 	private Advisor namedBeanToAdvisor(Object next) {
 		try {
-			return this.advisorAdapterRegistry.wrap(next);
+			return this.advisorAdapterRegistry.wrap(next);//将对象包装为Advisor对象
 		}
 		catch (UnknownAdviceTypeException ex) {
 			// We expected this to be an Advisor or Advice,

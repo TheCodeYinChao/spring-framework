@@ -53,7 +53,10 @@ import org.springframework.lang.Nullable;
  * synchronization of bean creation. There is usually no need for internal
  * synchronization other than for purposes of lazy initialization within the
  * FactoryBean itself (or the like).
- *
+ * 1. FactoryBean，就是一个bean对象，不要被前面的Factory扰乱误导，也是要放入BeanFactory被spring管理
+ * 2. FactoryBean特殊在，通过常规的ApplicationContext.getBean(beanId) 获取的不是FactoryBean这个直接对象，而是调用FactoryBean.getObject()生成的对象，返回给你
+ * 3. ApplicationContext.getBean(&beanId) ，加上&才能取得FactoryBean这个对象，可以理解为c语言里的取地址的意思
+ * 4. FactoryBean这样的过程，就是为了方便你定义生成【复杂bean】对象，就是这个bean对象不是简单的new ，设置几个参数，还有其他初始化才能完整被使用，比如ProxyFactoryBean
  * @author Rod Johnson
  * @author Juergen Hoeller
  * @since 08.03.2003

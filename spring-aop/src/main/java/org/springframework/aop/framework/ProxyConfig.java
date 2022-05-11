@@ -23,7 +23,7 @@ import org.springframework.util.Assert;
 /**
  * Convenience superclass for configuration used in creating proxies,
  * to ensure that all proxy creators have consistent properties.
- *
+ * Spring中所有AOP代理工厂的超类
  * @author Rod Johnson
  * @author Juergen Hoeller
  * @see AdvisedSupport
@@ -33,15 +33,25 @@ public class ProxyConfig implements Serializable {
 	/** use serialVersionUID from Spring 1.2 for interoperability. */
 	private static final long serialVersionUID = -8409359707199703185L;
 
-
+	//如果要代理的是目标类，而不是目标类的接口。如果该属性值设置为true，则创建CGLIB代理(也请参阅基于JDK和基于CGLIB的代理)。 代理接口则是基于继承
+	//这里其实就是选择那种代理方式 cglb还是jdk
 	private boolean proxyTargetClass = false;
 
-	private boolean optimize = false;
+	private boolean optimize = false; //仅用于cglb 他有优化机制 jdk是没有的
+
 
 	boolean opaque = false;
 
+	/**
+	 * 确定是否应该在ThreadLocal中公开当前代理，以便目标可以访问它。
+	 * 如果目标需要获取代理，并且exposeProxy属性设置为true，那么目标可以使用
+	 * AopContext.currentProxy()方法。
+	 */
 	boolean exposeProxy = false;
-
+	/**
+	 * 如果代理配置被冻结，则不再允许更改配置。这对于轻微的优化和在创建代理后不希望调用方能够操作代理(通过advise接口)的情况都很有用。
+	 * 此属性的默认值为false，因此允许更改(如添加额外的通知)。
+	 */
 	private boolean frozen = false;
 
 
