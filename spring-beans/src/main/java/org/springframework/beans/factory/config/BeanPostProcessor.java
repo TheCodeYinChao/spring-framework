@@ -47,6 +47,28 @@ import org.springframework.lang.Nullable;
  * {@link org.springframework.core.annotation.Order @Order} annotation is not
  * taken into account for {@code BeanPostProcessor} beans.
  *
+ * 10%spring核心
+ * spring的扩展方式之一（5种）
+ * 		BeanPostProcessor 通过实现其可以查收bean的实例化的过程
+ * 	   可以设置多个后置处理器，会形成list列表并依次执行，通过order接口进行排序
+ * 	   如： aop就是通过后置处理器BeanPostProcessor和ioc容器建立啦关系
+ *
+ * 	   1 举个例子：ApplicationContextAwareProcessor(他是spring自己的不能通过@Compent注解而是通过set
+ * 	   {@link  org.springframework.beans.factory.config.ConfigurableBeanFactory#addBeanPostProcessor(org.springframework.beans.factory.config.BeanPostProcessor)}方法加入到spring的db中)
+ * 	     其作用就是当应用的程序bean 实现ApplicationContextAware接口时 注入ApplicationContext对象（其一个作用）
+ * 	     当然还有别的org.springframework.context.support.ApplicationContextAwareProcessor#invokeAwareInterfaces(java.lang.Object)
+ *	   2 {@link org.springframework.beans.factory.annotation.InitDestroyAnnotationBeanPostProcessor }
+ *	   3 {@link InstantiationAwareBeanPostProcessor}
+ *	   4 {@link CommonAnnotationBeanPostProcessor}
+ *	   5 {@link org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor}
+ *	   6 {@link org.springframework.beans.factory.annotation.RequiredAnnotationBeanPostProcessor}
+ *	   7 {@link BeanValidationPostProcessor}
+ *	   8 {@link AbstractAutoProxyCreator}
+ *	   ......
+ *
+ *
+ *
+ *
  * @author Juergen Hoeller
  * @author Sam Brannen
  * @since 10.10.2003

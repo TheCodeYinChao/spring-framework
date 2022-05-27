@@ -13,7 +13,6 @@ public class Main1 {
 	@Test
 	public  void test1(){
 		AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(ConfigBean.class);
-
 		Object demoFactoryBean = context.getBean("&demoFactoryBean");
 		assertTrue(demoFactoryBean instanceof DemoFactoryBean);
 		Object factoryBean = context.getBean("demoFactoryBean");

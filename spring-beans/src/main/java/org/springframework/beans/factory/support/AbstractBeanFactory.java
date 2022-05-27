@@ -941,12 +941,12 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 		return result;
 	}
 
-	@Override
+	@Override//添加后置处理器
 	public void addBeanPostProcessor(BeanPostProcessor beanPostProcessor) {
 		Assert.notNull(beanPostProcessor, "BeanPostProcessor must not be null");
-		// Remove from old position, if any
+		// Remove from old position, if any如果有的话，从原来的位置移开
 		this.beanPostProcessors.remove(beanPostProcessor);
-		// Add to end of list
+		// Add to end of list 添加到列表的末尾
 		this.beanPostProcessors.add(beanPostProcessor);
 	}
 

@@ -16,9 +16,6 @@
 
 package org.springframework.context.annotation;
 
-import java.lang.annotation.Annotation;
-import java.util.function.Supplier;
-
 import org.springframework.beans.factory.annotation.AnnotatedGenericBeanDefinition;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.BeanDefinitionCustomizer;
@@ -32,6 +29,9 @@ import org.springframework.core.env.EnvironmentCapable;
 import org.springframework.core.env.StandardEnvironment;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
+
+import java.lang.annotation.Annotation;
+import java.util.function.Supplier;
 
 /**
  * Convenient adapter for programmatic registration of bean classes.
@@ -126,6 +126,8 @@ public class AnnotatedBeanDefinitionReader {
 
 
 	/**
+	 *
+	 * 注册一个或多个要处理的组件类两个意思  1 配置类  2 普通的java类
 	 * Register one or more component classes to be processed.
 	 * <p>Calls to {@code register} are idempotent; adding the same
 	 * component class more than once has no additional effect.
@@ -250,17 +252,35 @@ public class AnnotatedBeanDefinitionReader {
 			@Nullable Class<? extends Annotation>[] qualifiers, @Nullable Supplier<T> supplier,
 			@Nullable BeanDefinitionCustomizer[] customizers) {
 
+		//为注入的类创建一个bd定义，并提取元数据封装
 		AnnotatedGenericBeanDefinition abd = new AnnotatedGenericBeanDefinition(beanClass);
-		if (this.conditionEvaluator.shouldSkip(abd.getMetadata())) {
+		if (this.conditionEvaluator.shouldSkip(abd.getMetadata())) {//是否解析的条件 根据{@code @Conditional}注释确定是否应该跳过某项。
 			return;
 		}
 
 		abd.setInstanceSupplier(supplier);
-		ScopeMetadata scopeMetadata = this.scopeMetadataResolver.resolveScopeMetadata(abd);
+		ScopeMetadata scopeMetadata = this.scopeMetadataResolver.resolveScopeMetadata(abd);//作用域
 		abd.setScope(scopeMetadata.getScopeName());
+		//beanNameGenerator beanName生成器生成名称
 		String beanName = (name != null ? name : this.beanNameGenerator.generateBeanName(abd, this.registry));
 
+		/**
+		 * 处理类中的通用注解 如  @Lazy @DependsOn @Primary @Role 等注解
+		 * 处理完成后 添加到bd中
+		 */
 		AnnotationConfigUtils.processCommonDefinitionAnnotations(abd);
+
+		/**
+		 * 如果在向spring容器注册bean定义时，使用了额外的限定符注解则解析
+		 * Qualifier Primary 这个设计自动装配时使用
+		 *需要注意的是
+		 * byName 和 qualifiers这个变量是Annotated类型的数组，里面存储的不仅仅是@Qualifier注解，
+		 * 而是所有注解循环判断是否包含@Primary  @Lazy 注解
+		 *
+		 * 通过api 传过来的
+		 * 处理手动添加的qualifiers限定符，默认是通过AnnotationConfigUtils.processCommonDefinitionAnnotations(abd)解析
+		 * 基本上qualifiers是空的
+		 */
 		if (qualifiers != null) {
 			for (Class<? extends Annotation> qualifier : qualifiers) {
 				if (Primary.class == qualifier) {
@@ -280,9 +300,9 @@ public class AnnotatedBeanDefinitionReader {
 			}
 		}
 
-		BeanDefinitionHolder definitionHolder = new BeanDefinitionHolder(abd, beanName);
-		definitionHolder = AnnotationConfigUtils.applyScopedProxyMode(scopeMetadata, definitionHolder, this.registry);
-		BeanDefinitionReaderUtils.registerBeanDefinition(definitionHolder, this.registry);
+		BeanDefinitionHolder definitionHolder = new BeanDefinitionHolder(abd, beanName);//处理别名的参数封装model
+		definitionHolder = AnnotationConfigUtils.applyScopedProxyMode(scopeMetadata, definitionHolder, this.registry);//springmvc使用的
+		BeanDefinitionReaderUtils.registerBeanDefinition(definitionHolder, this.registry);//将bd注册到bdr中
 	}
 
 

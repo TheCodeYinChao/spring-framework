@@ -105,7 +105,12 @@ class ApplicationContextAwareProcessor implements BeanPostProcessor {
 		return bean;
 	}
 
+	/**
+	 * 将环境注入到对应的自定义的接口实现里去
+	 * @param bean
+	 */
 	private void invokeAwareInterfaces(Object bean) {
+		//比如这个比较常用的给我们自定义的EnvironmentAware实现类注入spring上下文配置环境
 		if (bean instanceof EnvironmentAware) {
 			((EnvironmentAware) bean).setEnvironment(this.applicationContext.getEnvironment());
 		}
@@ -124,6 +129,7 @@ class ApplicationContextAwareProcessor implements BeanPostProcessor {
 		if (bean instanceof ApplicationStartupAware) {
 			((ApplicationStartupAware) bean).setApplicationStartup(this.applicationContext.getApplicationStartup());
 		}
+		//比如这个比较常用的给我们自定义的ApplicationContextAware实现类注入spring上下文环境
 		if (bean instanceof ApplicationContextAware) {
 			((ApplicationContextAware) bean).setApplicationContext(this.applicationContext);
 		}
