@@ -16,14 +16,14 @@
 
 package org.springframework.aop.framework;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
 import org.springframework.aop.Advisor;
 import org.springframework.aop.support.AopUtils;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.core.SmartClassLoader;
 import org.springframework.lang.Nullable;
+
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Base class for {@link BeanPostProcessor} implementations that apply a
@@ -40,6 +40,7 @@ public abstract class AbstractAdvisingBeanPostProcessor extends ProxyProcessorSu
 
 	protected boolean beforeExistingAdvisors = false;
 
+	//符合条件的bean
 	private final Map<Class<?>, Boolean> eligibleBeans = new ConcurrentHashMap<>(256);
 
 
@@ -66,6 +67,7 @@ public abstract class AbstractAdvisingBeanPostProcessor extends ProxyProcessorSu
 	public Object postProcessAfterInitialization(Object bean, String beanName) {
 		if (this.advisor == null || bean instanceof AopInfrastructureBean) {
 			// Ignore AOP infrastructure such as scoped proxies.
+			//忽略AOP基础设施，比如作用域代理
 			return bean;
 		}
 
@@ -73,6 +75,7 @@ public abstract class AbstractAdvisingBeanPostProcessor extends ProxyProcessorSu
 			Advised advised = (Advised) bean;
 			if (!advised.isFrozen() && isEligible(AopUtils.getTargetClass(bean))) {
 				// Add our local Advisor to the existing proxy's Advisor chain...
+				//将我们本地的Advisor添加到现有代理的Advisor链中…
 				if (this.beforeExistingAdvisors) {
 					advised.addAdvisor(0, this.advisor);
 				}
@@ -83,20 +86,20 @@ public abstract class AbstractAdvisingBeanPostProcessor extends ProxyProcessorSu
 			}
 		}
 
-		if (isEligible(bean, beanName)) {
+		if (isEligible(bean, beanName)) {//判断类是否符合条件
 			ProxyFactory proxyFactory = prepareProxyFactory(bean, beanName);
-			if (!proxyFactory.isProxyTargetClass()) {
-				evaluateProxyInterfaces(bean.getClass(), proxyFactory);
+			if (!proxyFactory.isProxyTargetClass()) {//是否有接口
+				evaluateProxyInterfaces(bean.getClass(), proxyFactory);//评估代理接口
 			}
-			proxyFactory.addAdvisor(this.advisor);
-			customizeProxyFactory(proxyFactory);
+			proxyFactory.addAdvisor(this.advisor);//set 通知
+			customizeProxyFactory(proxyFactory);//钩子函数可以在代理对象生产前改变代理工厂中的内容 比如去除一个advisor
 
 			// Use original ClassLoader if bean class not locally loaded in overriding class loader
-			ClassLoader classLoader = getProxyClassLoader();
+			ClassLoader classLoader = getProxyClassLoader();//类加载
 			if (classLoader instanceof SmartClassLoader && classLoader != bean.getClass().getClassLoader()) {
 				classLoader = ((SmartClassLoader) classLoader).getOriginalClassLoader();
 			}
-			return proxyFactory.getProxy(classLoader);
+			return proxyFactory.getProxy(classLoader);//创建一个代理独享
 		}
 
 		// No proxy needed.
